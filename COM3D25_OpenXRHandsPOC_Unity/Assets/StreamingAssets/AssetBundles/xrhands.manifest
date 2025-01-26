@@ -1,0 +1,66 @@
+ManifestFileVersion: 0
+CRC: 1865203520
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 416b8bf03dc3436d245b3a8fc363da95
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 46fa4f86cd456b5e0eb6e9b4aec4343e
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: 416b8bf03dc3436d245b3a8fc363da95
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 21096d6d8059a5343a1f2b4d050e4789, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 07aaccfa1bc2417d8fbd0d9e2e102c2c, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: b5b9cf54c47f40ee9c3eb30ea8eb89b9, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 120
+  Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: Unity.XR.Hands
+  ClassName: UnityEngine.XR.Hands.HandUpdatedEvent
+- AssemblyName: Unity.XR.Hands
+  ClassName: UnityEngine.XR.Hands.JointToTransformReference
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.PersistentCallGroup
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.UnityEvent
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.UnityEvent`1[System.Boolean]
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Events.UnityEvent`1[UnityEngine.Pose]
+Assets:
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/White.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/HandsDefaultMaterial.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/Blue.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/VelocityPrefab.prefab
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/Red.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Models/RightHand.fbx
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Joint.prefab
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/Green.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Left Hand Tracking.prefab
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Models/LeftHand.fbx
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Right Hand Tracking.prefab
+Dependencies: []
