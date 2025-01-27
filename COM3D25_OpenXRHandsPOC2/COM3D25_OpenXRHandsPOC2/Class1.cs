@@ -136,24 +136,25 @@ namespace COM3D25_OpenXRHandsPOC2
 
         IEnumerator SetupHandVisualizerCoroutine()
         {
-            // get the path of this assembly and load the asset bundle containing the prefabs we need
-            var assemblyPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var assetBundlePath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(assemblyPath), "xrhands");
-
             // load async
-            var assetBundleCreateRequest = UnityEngine.AssetBundle.LoadFromFileAsync(assetBundlePath);
+            var assetBundleCreateRequest = UnityEngine.AssetBundle.LoadFromFileAsync(AssetBundlePath);
             yield return assetBundleCreateRequest;
 
             var assetBundle = assetBundleCreateRequest.assetBundle;
             if (assetBundle == null)
             {
-                Logger.LogError($"Failed to load asset bundle from {assetBundlePath}");
+                Logger.LogError($"Failed to load asset bundle from {AssetBundlePath}");
                 yield break;
             }
 
             // load the prefabs
-            LeftHandPrefab = assetBundle.LoadAsset<GameObject>("Left Hand Tracking");
-            RightHandPrefab = assetBundle.LoadAsset<GameObject>("Right Hand Tracking");
+            LeftHandPrefab = assetBundle.LoadAsset<GameObject>("Left Hand Tracking Custom");
+            RightHandPrefab = assetBundle.LoadAsset<GameObject>("Right Hand Tracking Custom");
+
+            if (LeftHandPrefab == null || RightHandPrefab == null)
+            {
+                throw new Exception("Failed to load Left or Right Hand Tracking Custom prefab");
+            }
 
             // Get XR Rig Root and attach an XROrigin
             var xrRigRoot = GameObject.Find("__GameMain__/OpenXRCameraRig(Clone)");
@@ -173,11 +174,11 @@ namespace COM3D25_OpenXRHandsPOC2
                 yield break;
             }
 
-            var leftHand = GameObject.Instantiate(LeftHandPrefab, xrRigCamera.transform.parent);
-            FixJoinTransforms(leftHand);
+            // set camera for xrOrigin
+            xrOriginComponent.Camera = xrRigCamera.GetComponent<Camera>();
 
+            var leftHand = GameObject.Instantiate(LeftHandPrefab, xrRigCamera.transform.parent);
             var rightHand = GameObject.Instantiate(RightHandPrefab, xrRigCamera.transform.parent);
-            FixJoinTransforms(rightHand);
 
             // create HandVisualizer game object at parent of xrRigCamera
             var handVisualizer = new GameObject("HandVisualizer");
@@ -190,9 +191,7 @@ namespace COM3D25_OpenXRHandsPOC2
             handVisualizerComponent.m_VelocityPrefab = assetBundle.LoadAsset<GameObject>("VelocityPrefab");
             handVisualizerComponent.debugDrawJoints = true;
             handVisualizerComponent.velocityType = HandVisualizer.VelocityType.None;
-
-            // set camera for xrOrigin
-            xrOriginComponent.Camera = xrRigCamera.GetComponent<Camera>();
+            handVisualizerComponent.drawMeshes = true;
         }
 
         string GetDeviceCharacteristics(InputDeviceCharacteristics characteristics)
@@ -220,16 +219,6 @@ namespace COM3D25_OpenXRHandsPOC2
             var report = generateReportMethod.Invoke(null, null) as string;
 
             Logger.LogInfo(report);
-        }
-
-        void FixJoinTransforms(GameObject hand)
-        {
-            var  driver = hand.GetComponent<XRHandSkeletonDriver>();
-            // set private field m_JointsTransforms to an empty list of JointToTransformReference
-            var jointsTransformsField = driver.GetType().GetField("m_JointTransformReferences", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            jointsTransformsField.SetValue(driver, new List<JointToTransformReference>());
-            // fix joints
-            driver.FindJointsFromRoot(new List<string>());
         }
 
         public void DumpDevices()

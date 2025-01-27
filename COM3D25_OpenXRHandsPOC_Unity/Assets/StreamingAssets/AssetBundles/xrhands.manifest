@@ -1,15 +1,15 @@
 ManifestFileVersion: 0
-CRC: 1865203520
+CRC: 4128435902
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 416b8bf03dc3436d245b3a8fc363da95
+    Hash: 3391d299abe520ad7c9439eb560cb32b
   TypeTreeHash:
     serializedVersion: 2
-    Hash: 46fa4f86cd456b5e0eb6e9b4aec4343e
+    Hash: aed504d927d39c68a238555dc624b181
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: 416b8bf03dc3436d245b3a8fc363da95
+    Hash: 3391d299abe520ad7c9439eb560cb32b
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -26,6 +26,8 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 48
   Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 9de2acd82ae80db479292367209636c7, type: 3}
 - Class: 114
   Script: {fileID: 11500000, guid: 21096d6d8059a5343a1f2b4d050e4789, type: 3}
 - Class: 114
@@ -53,6 +55,7 @@ SerializeReferenceClassIdentifiers:
   ClassName: UnityEngine.Events.UnityEvent`1[UnityEngine.Pose]
 Assets:
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/White.mat
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Left Hand Tracking Custom.prefab
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/HandsDefaultMaterial.mat
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/Blue.mat
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/VelocityPrefab.prefab
@@ -61,6 +64,7 @@ Assets:
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Joint.prefab
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Materials/Green.mat
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Left Hand Tracking.prefab
+- Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Right Hand Tracking Custom.prefab
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Models/LeftHand.fbx
 - Assets/Samples/XR Hands/1.4.3/HandVisualizer/Prefabs/Right Hand Tracking.prefab
 Dependencies: []
