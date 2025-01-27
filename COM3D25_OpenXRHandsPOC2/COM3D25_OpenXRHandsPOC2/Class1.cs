@@ -15,6 +15,7 @@ using UnityEngine.XR;
 using UnityEngine.XR.Management;
 using UnityEngine.XR.Hands;
 using UnityEngine.SubsystemsImplementation;
+using Unity.Burst;
 
 
 namespace COM3D25_OpenXRHandsPOC2
@@ -102,6 +103,15 @@ namespace COM3D25_OpenXRHandsPOC2
                 var registerMethod = typeof(OpenXRHandProvider).GetMethod("Register", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
                 registerMethod.Invoke(null, null);
 
+                // load burst compiled dll
+                Logger.LogInfo("Loading burst compiled dll...");
+                if (!System.IO.File.Exists(BurstDllPath))
+                {
+                    Logger.LogError($"Burst compiled dll not found at {BurstDllPath}");
+                    throw new Exception($"Burst compiled dll not found at {BurstDllPath}");
+                }
+                BurstRuntime.LoadAdditionalLibrary(BurstDllPath);
+
             }
             catch (Exception e)
             {
@@ -109,6 +119,11 @@ namespace COM3D25_OpenXRHandsPOC2
                 throw e;
             }
         }
+
+        String AssemblyPath => System.Reflection.Assembly.GetExecutingAssembly().Location;
+        String AssetBundlePath => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AssemblyPath), "xrhands");
+        String AssemblyName => System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+        String BurstDllPath => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AssemblyPath), $"{AssemblyName}_burst.dll");
 
         public void Start()
         {
@@ -167,11 +182,14 @@ namespace COM3D25_OpenXRHandsPOC2
             // create HandVisualizer game object at parent of xrRigCamera
             var handVisualizer = new GameObject("HandVisualizer");
             handVisualizer.transform.parent = xrRigCamera.transform.parent;
+            handVisualizer.transform.localPosition = Vector3.zero;
             var handVisualizerComponent = handVisualizer.AddComponent<HandVisualizer>();
             handVisualizerComponent.m_LeftHandMesh = leftHand;
             handVisualizerComponent.m_RightHandMesh = rightHand;
             handVisualizerComponent.m_DebugDrawPrefab = assetBundle.LoadAsset<GameObject>("Joint");
             handVisualizerComponent.m_VelocityPrefab = assetBundle.LoadAsset<GameObject>("VelocityPrefab");
+            handVisualizerComponent.debugDrawJoints = true;
+            handVisualizerComponent.velocityType = HandVisualizer.VelocityType.None;
 
             // set camera for xrOrigin
             xrOriginComponent.Camera = xrRigCamera.GetComponent<Camera>();

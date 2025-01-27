@@ -90,6 +90,10 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="Unity.Burst, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>F:\COM3D2JP\COM3D2_5\COM3D2x64_Data\Managed\Unity.Burst.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.XR.CoreUtils, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>F:\COM3D2JP\COM3D2_5\COM3D2x64_Data\Managed\Unity.XR.CoreUtils.dll</HintPath>
