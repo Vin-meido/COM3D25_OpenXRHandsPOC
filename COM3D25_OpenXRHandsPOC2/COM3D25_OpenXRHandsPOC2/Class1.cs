@@ -16,15 +16,20 @@ using UnityEngine.XR.Management;
 using UnityEngine.XR.Hands;
 using UnityEngine.SubsystemsImplementation;
 using Unity.Burst;
+using UnityEngine.XR.OpenXR.Features.Interactions;
+using System.Reflection;
 
 
 namespace COM3D25_OpenXRHandsPOC2
 {
-    [BepInPlugin("COM3D25_OpenXRHandsPOC2", "OpenXR Hands POC2", "0.0.1")]
-    public class COM3D25_OpenXRHandsPOC2 : BaseUnityPlugin
+    [BepInPlugin("COM3D25_OpenXRHandsPOC2Plugin", "OpenXR Hands POC2", "0.0.1")]
+    public class COM3D25_OpenXRHandsPOC2Plugin : BaseUnityPlugin
     {
+        public static COM3D25_OpenXRHandsPOC2Plugin Instance { get; private set;}
+
         GameObject LeftHandPrefab;
         GameObject RightHandPrefab;
+        
         bool ready = false;
 
         public void Awake()
@@ -34,62 +39,54 @@ namespace COM3D25_OpenXRHandsPOC2
 
             try
             {
-                // add HandTracking OpenXRFeature
-                // OpenXRSettings.features is internal so use reflection to add it
+                Instance = this;
+
+                var handTrackingFeature = SetupFeature<HandTracking>(
+                    "Hand Tracking Subsystem",
+                    "0.0.1",
+                    "com.unity.openxr.feature.input.handtracking",
+                    "XR_EXT_hand_tracking",
+                    "Unity",
+                    -100);
+
+                var metaHandTrackingAimFeature = SetupFeature<MetaHandTrackingAim>(
+                    "Meta Aim Hand Tracking",
+                    "0.0.1",
+                    "com.unity.openxr.feature.input.metahandtrackingaim",
+                    "XR_FB_hand_tracking_aim",
+                    "Unity",
+                    -100);
+
+                var additionalFeatures = new OpenXRFeature[] { handTrackingFeature, metaHandTrackingAimFeature };
+
+                // OpenXRSettings.features is internal so use reflection to get it
                 var featuresField = OpenXRSettings.Instance.GetType().GetField("features", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var features = featuresField.GetValue(OpenXRSettings.Instance) as OpenXRFeature[];
-
-                //var feature = new HandTracking();
-                var feature = ScriptableObject.CreateInstance<HandTracking>();
-
-                // use reflection to set the following internal fields on feature
-                /*
-                 *   nameUi: Hand Tracking Subsystem
-                version: 0.0.1
-                featureIdInternal: com.unity.openxr.feature.input.handtracking
-                openxrExtensionStrings: XR_EXT_hand_tracking
-                company: Unity
-                priority: -100
-                */
-
-                // first create a dict of the fields and values to set
-                var fieldValues = new Dictionary<string, object>
-                {
-                    { "nameUi", "Hand Tracking Subsystem" },
-                    { "version", "0.0.1" },
-                    { "featureIdInternal", "com.unity.openxr.feature.input.handtracking" },
-                    { "openxrExtensionStrings", "XR_EXT_hand_tracking" },
-                    { "company", "Unity" },
-                    { "priority", -100 },
-                };
-
-                // set m_enabled on feature subclass of HandTracking
-                var enabledField = feature.GetType().BaseType.GetField("m_enabled", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                enabledField.SetValue(feature, true);
-
-
-                // set the fields on the feature
-                foreach (var field in fieldValues)
-                {
-                    var featureField = feature.GetType().GetField(field.Key, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (featureField == null)
-                    {
-                        Logger.LogError($"Failed to find field {field.Key} on HandTracking feature");
-                        throw new Exception($"Failed to find field {field.Key} on HandTracking feature");
-                    }
-
-                    featureField.SetValue(feature, field.Value);
-                }
-
-                // create a new OpenXRFeature array with HandTracking added
-                var newFeatures = new OpenXRFeature[features.Length + 1];
-                features.CopyTo(newFeatures, 0);
-                newFeatures[features.Length] = feature;
+                var newFeatures = features.Concat(additionalFeatures).ToArray();
 
                 // set OpenXRSettings.features to the new array
                 featuresField.SetValue(OpenXRSettings.Instance, newFeatures);
 
-                Logger.LogInfo($"HandTracking feature added: {feature}");
+                // enable some features
+                var enableFeatures = new Type[]
+                {
+                    //typeof(HandInteractionProfile),
+                    //typeof(HandCommonPosesInteraction),
+                    //typeof(PalmPoseInteraction),
+                };
+
+                foreach (var f in newFeatures) {
+                    if (enableFeatures.Contains(f.GetType()))
+                    {
+                        f.enabled = true;
+                    }
+                }
+
+                Logger.LogInfo($"OpenXRSettings.features is now:");
+                foreach (var f in newFeatures)
+                {
+                   Logger.LogInfo($"  {f} enabled: {f.enabled}");
+                }
 
                 // Lets check loader status
                 var xrGeneralSettings = XRGeneralSettings.Instance;
@@ -98,10 +95,7 @@ namespace COM3D25_OpenXRHandsPOC2
                 Logger.LogInfo($"XRManager is: {xrManager}. init is: {xrManager.isInitializationComplete}");
                 //DumpReport();
 
-                // call private static OpenXRHandProvider.Register
-                Logger.LogInfo("Registering HandTracking provider...");
-                var registerMethod = typeof(OpenXRHandProvider).GetMethod("Register", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                registerMethod.Invoke(null, null);
+                RunSubsystemRegistrations<HandTracking>();
 
                 // load burst compiled dll
                 Logger.LogInfo("Loading burst compiled dll...");
@@ -112,6 +106,8 @@ namespace COM3D25_OpenXRHandsPOC2
                 }
                 BurstRuntime.LoadAdditionalLibrary(BurstDllPath);
 
+                Logger.LogInfo("Patching VRDeviceManager");
+                VRDeviceManagerPatch.Patch();
             }
             catch (Exception e)
             {
@@ -119,6 +115,69 @@ namespace COM3D25_OpenXRHandsPOC2
                 throw e;
             }
         }
+
+        void RunSubsystemRegistrations(Assembly assembly)
+        {
+            Logger.LogInfo($"Running subsystem registrations for {assembly}");
+            // scan assembly with private static methods decorated with [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+            // then call them
+            foreach (var type in assembly.GetTypes())
+            {
+                foreach (var method in type.GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic))
+                {
+                    var attributes = method.GetCustomAttributes(typeof(UnityEngine.RuntimeInitializeOnLoadMethodAttribute), true);
+                    if (attributes.Length > 0)
+                    {
+                        var attribute = attributes[0] as UnityEngine.RuntimeInitializeOnLoadMethodAttribute;
+                        if (attribute.loadType == UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)
+                        {
+                            Logger.LogInfo($"Running subsystem registration method {method} on type {type}");
+                            method.Invoke(null, null);
+                        }
+                    }
+                }
+            }
+        }
+
+        void RunSubsystemRegistrations<T>()
+        {
+            RunSubsystemRegistrations(typeof(T).Assembly);
+        }
+
+        OpenXRFeature SetupFeature<T>(string nameUi, string version, string featureIdInternal, string openxrExtensionStrings, string company, int priority) where T: OpenXRFeature
+        {
+            var feature = ScriptableObject.CreateInstance<T>();
+
+            var fieldValues = new Dictionary<string, object>
+                {
+                    { "nameUi", nameUi },
+                    { "version", version },
+                    { "featureIdInternal", featureIdInternal },
+                    { "openxrExtensionStrings", openxrExtensionStrings },
+                    { "company", company },
+                    { "priority", priority },
+                };
+
+            // set m_enabled on feature subclass of HandTracking
+            var enabledField = feature.GetType().BaseType.GetField("m_enabled", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            enabledField.SetValue(feature, true);
+
+            // set the fields on the feature
+            foreach (var field in fieldValues)
+            {
+                var featureField = feature.GetType().GetField(field.Key, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (featureField == null)
+                {
+                    Logger.LogError($"Failed to find field {field.Key} on HandTracking feature");
+                    throw new Exception($"Failed to find field {field.Key} on HandTracking feature");
+                }
+
+                featureField.SetValue(feature, field.Value);
+            }
+
+            return feature;
+        }
+
 
         String AssemblyPath => System.Reflection.Assembly.GetExecutingAssembly().Location;
         String AssetBundlePath => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AssemblyPath), "xrhands");
@@ -236,8 +295,8 @@ namespace COM3D25_OpenXRHandsPOC2
             var xrHandSubsystem = HandTracking.subsystem;
             if (xrHandSubsystem != null)
             {
-                Logger.LogInfo($"Left hand: {xrHandSubsystem.leftHand} tracked: {xrHandSubsystem.leftHand.isTracked}");
-                Logger.LogInfo($"Right hand: {xrHandSubsystem.rightHand} tracked: {xrHandSubsystem.rightHand.isTracked}");
+                Logger.LogInfo($"Left hand: {xrHandSubsystem.leftHand}");
+                Logger.LogInfo($"Right hand: {xrHandSubsystem.rightHand}");
             } else
             {
                 Logger.LogWarning("XRHandSubsystem not found or initialized");
@@ -259,6 +318,16 @@ namespace COM3D25_OpenXRHandsPOC2
             DumpReport();
             DumpDevices();
 
+        }
+
+        internal static void LogInfo(string message)
+        {
+            Instance?.Logger.LogInfo(message);
+        }
+
+        internal static void LogError(string message)
+        {
+            Instance?.Logger.LogError(message);
         }
     }
 
