@@ -17,7 +17,7 @@ namespace COM3D25_OpenXRHandsPOC2
             Logger.LogInfo($"HandTrackingController created: {inputDevice.name}");
         }
 
-        public override GameMain.VRDeviceType DeviceType => GameMain.VRDeviceType.RIFT;
+        public override GameMain.VRDeviceType DeviceType => GameMain.VRDeviceType.RIFT_TOUCH;
 
 
         private string deviceHandedNessString => this.IsRightHand ? "Right" : "Left";
@@ -36,6 +36,10 @@ namespace COM3D25_OpenXRHandsPOC2
 
         OneEuroFilterVector3 OneEuroFilterVector3 = new OneEuroFilterVector3(Vector3.zero, 0.1f, 0.02f);
 
+        public virtual string buttonActionPrimaryBindingString => this.metaHandAimPathString + "/indexPressed";
+        public virtual string gripActionBindingString => this.metaHandAimPathString + "/middlePressed";
+        public virtual string gripActionValueBindingString => this.metaHandAimPathString + "/pinchStrengthMiddle";
+
         public override Vector3 LocalPosition
         {
             get
@@ -52,29 +56,9 @@ namespace COM3D25_OpenXRHandsPOC2
                 var rotation = base.LocalRotation;
                 // rotation points forward. rotate along this forward axis by 90 degrees counter clockwise
                 return rotation * Quaternion.Euler(0, 0, 90);
-                
-                
             }
         }
 
-
-        protected InputAction gripAction;
-        protected InputAction GripAction
-        {
-            get
-            {
-                if (this.gripAction == null)
-                {
-                    // <XRHandDevice>{LeftHand}/{GraspFirm}
-                    // <HandInteraction>{LeftHand}/graspValue
-
-                    //this.gripAction = new InputAction(null, InputActionType.Value, this.deviceBindingPathString + "/{GraspFirm}", null, null, null);
-                    this.gripAction = new InputAction(null, InputActionType.Value, this.handInteractionPathString + "/graspValue", null, null, null);
-                }
-
-                return gripAction;
-            }
-        }
 
         protected InputAction buttonActionPrimary;
         protected InputAction ButtonActionPrimary
@@ -83,18 +67,27 @@ namespace COM3D25_OpenXRHandsPOC2
             {
                 if (this.buttonActionPrimary == null)
                 {
-                    // <MetaAimHand>{LeftHand}/indexPressed
-                    this.buttonActionPrimary = new InputAction(null, InputActionType.Value, this.metaHandAimPathString + "/indexPressed", null, null, null);
+                    this.buttonActionPrimary = new InputAction(null, InputActionType.Value, buttonActionPrimaryBindingString, null, null, null);
                 }
                 return this.buttonActionPrimary;
             }
         }
 
+        IInputActionFilter _primaryActionFilter;
+        IInputActionFilter PrimaryActionFilter => _primaryActionFilter ?? (_primaryActionFilter = new ShortPressInputActionFilter(this.ButtonActionPrimary));
+
+        IInputActionFilter _gripActionFilter;
+        IInputActionFilter GripActionFilter => _gripActionFilter ?? (_gripActionFilter = new LongPressInputActionFilter(this.ButtonActionPrimary));
+        //IInputActionFilter GripActionFilter => _gripActionFilter ?? (_gripActionFilter = new PassthroughInputActionFilter(this.ButtonActionPrimary));
+
+
+
+
         public override List<UnityEngine.InputSystem.InputAction> GetAllActionList()
         {
             return new List<UnityEngine.InputSystem.InputAction>()
             {
-                this.GripAction, this.ButtonActionPrimary,
+                this.ButtonActionPrimary,
             };
         }
 
@@ -105,26 +98,35 @@ namespace COM3D25_OpenXRHandsPOC2
 
         public override float GetTriggerRate()
         {
-            return 0;
+            return GripActionFilter.IsPressDown ? 1 : 0;
         }
 
         public override void Haptic(float force, float time)
         {
+            Logger.LogInfo($"Haptic: {force} {time}");
             return;
         }
 
-        protected InputAction[] GetButtonAction(AVRControllerButtons.BTN button)
+        IInputActionFilter[] GetButtonAction(AVRControllerButtons.BTN button)
         {
-            InputAction[] result = new InputAction[] { };
+            IInputActionFilter[] result = new IInputActionFilter[] { };
 
             switch (button)
             {
                 case AVRControllerButtons.BTN.VIRTUAL_L_CLICK:
-                    result = new InputAction[] { this.ButtonActionPrimary };
+                    result = new IInputActionFilter[] { this.PrimaryActionFilter };
+                    break;
+
+                case AVRControllerButtons.BTN.VIRTUAL_GRUB:
+                    result = new IInputActionFilter[] { this.GripActionFilter };
                     break;
 
                 case AVRControllerButtons.BTN.GRIP:
-                    result = new InputAction[] { this.GripAction };
+                    result = new IInputActionFilter[] { this.GripActionFilter };
+                    break;
+
+                case AVRControllerButtons.BTN.TRIGGER:
+                    result = new IInputActionFilter[] { this.GripActionFilter };
                     break;
             }
 
@@ -133,12 +135,11 @@ namespace COM3D25_OpenXRHandsPOC2
 
         public override bool IsPressDown(AVRControllerButtons.BTN button)
         {
-            foreach (InputAction inputAction in this.GetButtonAction(button))
+            foreach (var filter in this.GetButtonAction(button))
             {
-
-                if (0.5f <= inputAction.ReadValue<float>())
+                if (filter.IsPressDown)
                 {
-                    //Logger.LogInfo($"IsPressDown: {button}");
+                    Logger.LogInfo($"PressDown: {button}");
                     return true;
                 }
             }
@@ -147,29 +148,26 @@ namespace COM3D25_OpenXRHandsPOC2
 
         public override bool IsPressed(AVRControllerButtons.BTN button)
         {
-            foreach (InputAction inputAction in this.GetButtonAction(button))
+            foreach (var filter in this.GetButtonAction(button))
             {
 
-                if (inputAction.WasPressedThisFrame())
+                if (filter.IsPressed)
                 {
-                    Logger.LogInfo($"IsPressed: {button}");
                     return true;
                 }
-                //Logger.LogInfo($"Not IsPressed: {inputAction}");
             }
             return false;
         }
 
         public override bool IsPressUp(AVRControllerButtons.BTN button)
         {
-            foreach (InputAction inputAction in this.GetButtonAction(button))
+            foreach (var filter in this.GetButtonAction(button))
             {
-                if (inputAction.WasReleasedThisFrame())
+                if (filter.IsPressUp)
                 {
                     Logger.LogInfo($"IsPressUp: {button}");
                     return true;
                 }
-                //Logger.LogInfo($"Not IsPressUp: {inputAction}");
             }
             return false;
         }

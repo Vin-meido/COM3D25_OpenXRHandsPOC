@@ -393,6 +393,10 @@
   <ItemGroup>
     <Compile Include="Class1.cs" />
     <Compile Include="HandTrackingController.cs" />
+    <Compile Include="InputActionFilter\IInputActionFilter.cs" />
+    <Compile Include="InputActionFilter\LongPressInputActionFilter.cs" />
+    <Compile Include="InputActionFilter\PassthroughInputActionFilter.cs" />
+    <Compile Include="InputActionFilter\ShortPressInputActionFilter.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="OneEuroFilterVector3.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

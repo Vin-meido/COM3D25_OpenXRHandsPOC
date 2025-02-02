@@ -30,16 +30,21 @@ namespace COM3D25_OpenXRHandsPOC2
         GameObject LeftHandPrefab;
         GameObject RightHandPrefab;
         
-        bool ready = false;
-
         public void Awake()
         {
             Logger.LogInfo("OpenXR Hands POC2 initialize");
-            Logger.LogInfo($"OpenXRSettings is: {OpenXRSettings.Instance}");
 
             try
             {
+                if (Instance != null)
+                {
+                    Logger.LogError("Instance already set");
+                    throw new Exception("Instance already set");
+                }
+
                 Instance = this;
+
+                Logger.LogInfo($"OpenXRSettings is: {OpenXRSettings.Instance}");
 
                 var handTrackingFeature = SetupFeature<HandTracking>(
                     "Hand Tracking Subsystem",
@@ -88,14 +93,14 @@ namespace COM3D25_OpenXRHandsPOC2
                    Logger.LogInfo($"  {f} enabled: {f.enabled}");
                 }
 
+                RunSubsystemRegistrations<HandTracking>();
+
                 // Lets check loader status
                 var xrGeneralSettings = XRGeneralSettings.Instance;
                 Logger.LogInfo($"XRGeneralSettings is: {xrGeneralSettings}");
                 var xrManager = xrGeneralSettings.Manager;
                 Logger.LogInfo($"XRManager is: {xrManager}. init is: {xrManager.isInitializationComplete}");
                 //DumpReport();
-
-                RunSubsystemRegistrations<HandTracking>();
 
                 // load burst compiled dll
                 Logger.LogInfo("Loading burst compiled dll...");
@@ -111,7 +116,7 @@ namespace COM3D25_OpenXRHandsPOC2
             }
             catch (Exception e)
             {
-                Logger.LogError($"Failed to add HandTracking feature: {e}");
+                Logger.LogError($"Initialization failed: {e}\n{e.StackTrace}");
                 throw e;
             }
         }
@@ -189,6 +194,13 @@ namespace COM3D25_OpenXRHandsPOC2
             Logger.LogInfo("OpenXR Hands POC2 started");
             Logger.LogInfo($"GameMain is: {GameMain.Instance}");
 
+            if (!GameMain.Instance.VRMode)
+            {
+                Logger.LogInfo("Not running in VR mode, disabling plugin");
+                this.enabled = false;
+                return;
+            }
+
             StartCoroutine(StartXRCoroutine());
             StartCoroutine(SetupHandVisualizerCoroutine());
         }
@@ -251,6 +263,8 @@ namespace COM3D25_OpenXRHandsPOC2
             handVisualizerComponent.debugDrawJoints = true;
             handVisualizerComponent.velocityType = HandVisualizer.VelocityType.None;
             handVisualizerComponent.drawMeshes = true;
+
+            assetBundle.Unload(false);
         }
 
         string GetDeviceCharacteristics(InputDeviceCharacteristics characteristics)
@@ -317,7 +331,6 @@ namespace COM3D25_OpenXRHandsPOC2
             XRGeneralSettings.Instance.Manager.StartSubsystems();
             DumpReport();
             DumpDevices();
-
         }
 
         internal static void LogInfo(string message)
@@ -330,5 +343,4 @@ namespace COM3D25_OpenXRHandsPOC2
             Instance?.Logger.LogError(message);
         }
     }
-
 }
