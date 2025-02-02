@@ -28,9 +28,11 @@ namespace COM3D25_OpenXRHandsPOC2
         private string handInteractionPathString => $"<HandInteraction>{{{this.deviceHandedNessString}Hand}}";
 
 
-        public override string defaultPositionBindingString => this.deviceBindingPathString + "/pinchPosition";
+        //public override string defaultPositionBindingString => this.deviceBindingPathString + "/pinchPosition";
         //public override string defaultPositionBindingString => this.deviceBindingPathString + "/devicePosition";
-        public override string defaultRotationBindingString => this.deviceBindingPathString + "/deviceRotation";
+        public override string defaultPositionBindingString => this.metaHandAimPathString + "/devicePosition";
+        //public override string defaultRotationBindingString => this.deviceBindingPathString + "/deviceRotation";
+        public override string defaultRotationBindingString => this.metaHandAimPathString + "/deviceRotation";
 
         OneEuroFilterVector3 OneEuroFilterVector3 = new OneEuroFilterVector3(Vector3.zero, 0.1f, 0.02f);
 
@@ -40,6 +42,18 @@ namespace COM3D25_OpenXRHandsPOC2
             {
                 var position = base.LocalPosition;
                 return OneEuroFilterVector3.Filter(position, Time.deltaTime);
+            }
+        }
+
+        public override Quaternion LocalRotation
+        {
+            get
+            {
+                var rotation = base.LocalRotation;
+                // rotation points forward. rotate along this forward axis by 90 degrees counter clockwise
+                return rotation * Quaternion.Euler(0, 0, 90);
+                
+                
             }
         }
 
