@@ -19,16 +19,19 @@ namespace COM3D25_OpenXRHandsPOC2
         // the last time the action was actually pressed
         float lastPressedTime = 0;
 
-        // if true, the action was previously pressed and we are waiting for the threshold to pass before considering it a long press
-        bool waitLongPress = false;
-
-        // if true, trigger the long press event this frame
-        bool triggerLongPressed = false;
-        bool triggerLongPressDown = false;
-        bool triggerLongPressUp = false;
-
         // last time the filter was updated
         float lastUpdateTime;
+
+        enum State
+        {
+            Initial,
+            Waiting,
+            PressDown,
+            Pressed,
+            PressUp,
+        }
+
+        State state = State.Initial;
 
         public LongPressInputActionFilter(InputAction action, float threshold=0.2f)
         {
@@ -51,60 +54,46 @@ namespace COM3D25_OpenXRHandsPOC2
             if (action.WasPressedThisFrame())
             {
                 lastPressedTime = Time.time;
-                waitLongPress = true;
-                triggerLongPressDown = false;
-                triggerLongPressed = false;
-                triggerLongPressUp = false;
+                state = State.Waiting;
                 return;
             }
 
             if (action.ReadValue<float>() > 0.5f)
             {
-                if (waitLongPress)
+                if (state == State.Waiting)
                 {
                     if (Time.time - lastPressedTime > threshold)
                     {
-                        waitLongPress = false;
-                        triggerLongPressDown = true;
-                        triggerLongPressed = true;
+                        state = State.PressDown;
                     }
 
                     return;
                 }
 
-                if (triggerLongPressDown)
+                if (state == State.PressDown)
                 {
-                    triggerLongPressDown = false;
+                    state = State.Pressed;
+                    return;
                 }
 
-                if (triggerLongPressed) return;
+                if (state == State.Pressed) return;
             }
 
 
-            if (action.WasReleasedThisFrame() && triggerLongPressed)
+            if (action.WasReleasedThisFrame() && (state == State.Pressed || state == State.PressDown))
             {
-                triggerLongPressDown = false;
-                triggerLongPressed = false;
-                triggerLongPressUp = true;
+                state = State.PressUp;
                 return;
             }
 
-            Reset();
-        }
-
-        void Reset()
-        {
-            waitLongPress = false;
-            triggerLongPressed = false;
-            triggerLongPressDown = false;
-            triggerLongPressUp = false;
+            state = State.Initial;
         }
 
         public bool IsPressed {
             get
             {
                 CheckFrame();
-                return triggerLongPressed;
+                return state == State.Pressed || state == State.PressDown;
             }
         }
 
@@ -113,7 +102,7 @@ namespace COM3D25_OpenXRHandsPOC2
             get
             {
                 CheckFrame();
-                return triggerLongPressDown;
+                return state == State.PressDown;
             }
         }
 
@@ -122,7 +111,7 @@ namespace COM3D25_OpenXRHandsPOC2
             get
             {
                 CheckFrame();
-                return triggerLongPressUp;
+                return state == State.PressUp;
             }
         }
     }

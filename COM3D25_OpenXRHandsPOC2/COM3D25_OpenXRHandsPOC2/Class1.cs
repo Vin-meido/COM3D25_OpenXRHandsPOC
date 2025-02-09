@@ -29,6 +29,8 @@ namespace COM3D25_OpenXRHandsPOC2
 
         GameObject LeftHandPrefab;
         GameObject RightHandPrefab;
+
+        bool startupComplete = false;
         
         public void Awake()
         {
@@ -45,71 +47,10 @@ namespace COM3D25_OpenXRHandsPOC2
                 Instance = this;
 
                 Logger.LogInfo($"OpenXRSettings is: {OpenXRSettings.Instance}");
+                Logger.LogInfo($"XRGeneralSettings is: {XRGeneralSettings.Instance}");
+                Logger.LogInfo($"XRManager is: {XRGeneralSettings.Instance.Manager}. init is: {XRGeneralSettings.Instance.Manager.isInitializationComplete}");
 
-                var handTrackingFeature = SetupFeature<HandTracking>(
-                    "Hand Tracking Subsystem",
-                    "0.0.1",
-                    "com.unity.openxr.feature.input.handtracking",
-                    "XR_EXT_hand_tracking",
-                    "Unity",
-                    -100);
-
-                var metaHandTrackingAimFeature = SetupFeature<MetaHandTrackingAim>(
-                    "Meta Aim Hand Tracking",
-                    "0.0.1",
-                    "com.unity.openxr.feature.input.metahandtrackingaim",
-                    "XR_FB_hand_tracking_aim",
-                    "Unity",
-                    -100);
-
-                var additionalFeatures = new OpenXRFeature[] { handTrackingFeature, metaHandTrackingAimFeature };
-
-                // OpenXRSettings.features is internal so use reflection to get it
-                var featuresField = OpenXRSettings.Instance.GetType().GetField("features", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var features = featuresField.GetValue(OpenXRSettings.Instance) as OpenXRFeature[];
-                var newFeatures = features.Concat(additionalFeatures).ToArray();
-
-                // set OpenXRSettings.features to the new array
-                featuresField.SetValue(OpenXRSettings.Instance, newFeatures);
-
-                // enable some features
-                var enableFeatures = new Type[]
-                {
-                    //typeof(HandInteractionProfile),
-                    //typeof(HandCommonPosesInteraction),
-                    //typeof(PalmPoseInteraction),
-                };
-
-                foreach (var f in newFeatures) {
-                    if (enableFeatures.Contains(f.GetType()))
-                    {
-                        f.enabled = true;
-                    }
-                }
-
-                Logger.LogInfo($"OpenXRSettings.features is now:");
-                foreach (var f in newFeatures)
-                {
-                   Logger.LogInfo($"  {f} enabled: {f.enabled}");
-                }
-
-                RunSubsystemRegistrations<HandTracking>();
-
-                // Lets check loader status
-                var xrGeneralSettings = XRGeneralSettings.Instance;
-                Logger.LogInfo($"XRGeneralSettings is: {xrGeneralSettings}");
-                var xrManager = xrGeneralSettings.Manager;
-                Logger.LogInfo($"XRManager is: {xrManager}. init is: {xrManager.isInitializationComplete}");
-                //DumpReport();
-
-                // load burst compiled dll
-                Logger.LogInfo("Loading burst compiled dll...");
-                if (!System.IO.File.Exists(BurstDllPath))
-                {
-                    Logger.LogError($"Burst compiled dll not found at {BurstDllPath}");
-                    throw new Exception($"Burst compiled dll not found at {BurstDllPath}");
-                }
-                BurstRuntime.LoadAdditionalLibrary(BurstDllPath);
+                SetupHandTracking();
 
                 Logger.LogInfo("Patching VRDeviceManager");
                 VRDeviceManagerPatch.Patch();
@@ -119,6 +60,78 @@ namespace COM3D25_OpenXRHandsPOC2
                 Logger.LogError($"Initialization failed: {e}\n{e.StackTrace}");
                 throw e;
             }
+        }
+
+        void SetupHandTracking()
+        {
+            Logger.LogInfo("Hand tracking setup");
+
+            Logger.LogInfo("Running subsystem registrations...");
+            RunSubsystemRegistrations<HandTracking>();
+
+            Logger.LogInfo("Loading burst compiled dll...");
+            if (!System.IO.File.Exists(BurstDllPath))
+            {
+                Logger.LogError($"Burst compiled dll not found at {BurstDllPath}");
+                throw new Exception($"Burst compiled dll not found at {BurstDllPath}");
+            }
+
+            if (!BurstRuntime.LoadAdditionalLibrary(BurstDllPath))
+            {
+                Logger.LogError($"Failed to load burst compiled dll from {BurstDllPath}");
+                throw new Exception($"Failed to load burst compiled dll from {BurstDllPath}");
+            }
+
+            Logger.LogInfo("Setting up Hand tracking OpenXR features...");
+            var handTrackingFeature = SetupFeature<HandTracking>(
+                "Hand Tracking Subsystem",
+                "0.0.1",
+                "com.unity.openxr.feature.input.handtracking",
+                "XR_EXT_hand_tracking",
+                "Unity",
+                -100);
+
+            var metaHandTrackingAimFeature = SetupFeature<MetaHandTrackingAim>(
+                "Meta Aim Hand Tracking",
+                "0.0.1",
+                "com.unity.openxr.feature.input.metahandtrackingaim",
+                "XR_FB_hand_tracking_aim",
+                "Unity",
+                -100);
+
+            var additionalFeatures = new OpenXRFeature[] { handTrackingFeature, metaHandTrackingAimFeature };
+
+            // OpenXRSettings.features is internal so use reflection to get it
+            var featuresField = OpenXRSettings.Instance.GetType().GetField("features", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var features = featuresField.GetValue(OpenXRSettings.Instance) as OpenXRFeature[];
+            var newFeatures = features.Concat(additionalFeatures).ToArray();
+
+            // set OpenXRSettings.features to the new array
+            featuresField.SetValue(OpenXRSettings.Instance, newFeatures);
+
+            // enable some features
+            var enableFeatures = new Type[]
+            {
+                //typeof(HandInteractionProfile),
+                //typeof(HandCommonPosesInteraction),
+                //typeof(PalmPoseInteraction),
+            };
+
+            foreach (var f in newFeatures)
+            {
+                if (enableFeatures.Contains(f.GetType()))
+                {
+                    f.enabled = true;
+                }
+            }
+
+            Logger.LogInfo($"OpenXRSettings.features is now:");
+            foreach (var f in newFeatures)
+            {
+                Logger.LogInfo($"  {f} enabled: {f.enabled}");
+            }
+
+            Logger.LogInfo("Hand tracking setup complete");
         }
 
         void RunSubsystemRegistrations(Assembly assembly)
@@ -201,8 +214,13 @@ namespace COM3D25_OpenXRHandsPOC2
                 return;
             }
 
-            StartCoroutine(StartXRCoroutine());
-            StartCoroutine(SetupHandVisualizerCoroutine());
+            if(!startupComplete)
+            {
+                startupComplete = true;
+                Logger.LogInfo("Running startup coroutines");
+                StartCoroutine(StartXRCoroutine());
+                StartCoroutine(SetupHandVisualizerCoroutine());
+            }
         }
 
         IEnumerator SetupHandVisualizerCoroutine()

@@ -8,8 +8,13 @@ using System.Threading.Tasks;
 
 namespace XRSettingsPatcher
 {
+    
     public class Class1
     {
+        // Disables autoamtic initialization of XR at startup
+        // so we can do late registrations of subsystems and features
+        // and start XR when those are ready
+
         public static IEnumerable<string> TargetDLLs { get; } = new[] { "Unity.XR.Management.dll" };
 
         public static void Patch(AssemblyDefinition assembly)
@@ -43,6 +48,10 @@ namespace XRSettingsPatcher
 
     public class AssemblyXRHandsReferencePatcher
     {
+        // Fixes Kiss code handling of VR Devices bug where
+        // if a VR device is not recognized, it still gets added to the device list as null
+        // and causes null reference exceptions later on
+
         public static IEnumerable<string> TargetDLLs { get; } = new[] { "Assembly-CSharp.dll" };
 
         public static void Patch(AssemblyDefinition assembly)
