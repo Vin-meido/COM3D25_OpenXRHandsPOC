@@ -12,9 +12,13 @@ namespace COM3D25_OpenXRHandsPOC2
 {
     public class HandTrackingController : HandControllerBase
     {
+        PluginConfig config;
+
         public HandTrackingController(InputDevice inputDevice) : base(inputDevice)
         {
             Logger.LogInfo($"HandTrackingController created: {inputDevice.name}");
+            config = COM3D25_OpenXRHandsPOC2Plugin.Instance.Config;
+
         }
 
         public override GameMain.VRDeviceType DeviceType => GameMain.VRDeviceType.RIFT_TOUCH;
@@ -34,7 +38,7 @@ namespace COM3D25_OpenXRHandsPOC2
         //public override string defaultRotationBindingString => this.deviceBindingPathString + "/deviceRotation";
         public override string defaultRotationBindingString => this.metaHandAimPathString + "/deviceRotation";
 
-        OneEuroFilterVector3 OneEuroFilterVector3 = new OneEuroFilterVector3(Vector3.zero, 0.1f, 0.02f);
+        OneEuroFilterVector3 OneEuroFilterVector3 = new OneEuroFilterVector3(Vector3.zero);
 
         public virtual string buttonActionPrimaryBindingString => this.metaHandAimPathString + "/indexPressed";
         public virtual string gripActionBindingString => this.metaHandAimPathString + "/middlePressed";
@@ -45,7 +49,11 @@ namespace COM3D25_OpenXRHandsPOC2
             get
             {
                 var position = base.LocalPosition;
-                return OneEuroFilterVector3.Filter(position, Time.deltaTime);
+                if (config.enableSmoothing.Value)
+                {
+                    return OneEuroFilterVector3.Filter(position, Time.deltaTime, config.smoothingMinCutoff.Value, config.smoothingBeta.Value);
+                }
+                return position;
             }
         }
 
@@ -53,6 +61,8 @@ namespace COM3D25_OpenXRHandsPOC2
         {
             get
             {
+                //return base.LocalRotation;
+
                 var rotation = base.LocalRotation;
                 // rotation points forward. rotate along this forward axis by 90 degrees counter clockwise
                 return rotation * Quaternion.Euler(0, 0, 90);

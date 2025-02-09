@@ -399,6 +399,7 @@
     <Compile Include="InputActionFilter\ShortPressInputActionFilter.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="OneEuroFilterVector3.cs" />
+    <Compile Include="PluginConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VRDeviceManagerPatch.cs" />
   </ItemGroup>

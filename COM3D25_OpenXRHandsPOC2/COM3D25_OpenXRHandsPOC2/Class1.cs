@@ -27,6 +27,8 @@ namespace COM3D25_OpenXRHandsPOC2
     {
         public static COM3D25_OpenXRHandsPOC2Plugin Instance { get; private set;}
 
+        new internal PluginConfig Config { get; private set; }
+
         GameObject LeftHandPrefab;
         GameObject RightHandPrefab;
 
@@ -45,6 +47,7 @@ namespace COM3D25_OpenXRHandsPOC2
                 }
 
                 Instance = this;
+                this.Config = new PluginConfig(base.Config);
 
                 Logger.LogInfo($"OpenXRSettings is: {OpenXRSettings.Instance}");
                 Logger.LogInfo($"XRGeneralSettings is: {XRGeneralSettings.Instance}");
@@ -65,22 +68,6 @@ namespace COM3D25_OpenXRHandsPOC2
         void SetupHandTracking()
         {
             Logger.LogInfo("Hand tracking setup");
-
-            Logger.LogInfo("Running subsystem registrations...");
-            RunSubsystemRegistrations<HandTracking>();
-
-            Logger.LogInfo("Loading burst compiled dll...");
-            if (!System.IO.File.Exists(BurstDllPath))
-            {
-                Logger.LogError($"Burst compiled dll not found at {BurstDllPath}");
-                throw new Exception($"Burst compiled dll not found at {BurstDllPath}");
-            }
-
-            if (!BurstRuntime.LoadAdditionalLibrary(BurstDllPath))
-            {
-                Logger.LogError($"Failed to load burst compiled dll from {BurstDllPath}");
-                throw new Exception($"Failed to load burst compiled dll from {BurstDllPath}");
-            }
 
             Logger.LogInfo("Setting up Hand tracking OpenXR features...");
             var handTrackingFeature = SetupFeature<HandTracking>(
@@ -129,6 +116,23 @@ namespace COM3D25_OpenXRHandsPOC2
             foreach (var f in newFeatures)
             {
                 Logger.LogInfo($"  {f} enabled: {f.enabled}");
+            }
+
+
+            Logger.LogInfo("Running subsystem registrations...");
+            RunSubsystemRegistrations<HandTracking>();
+
+            Logger.LogInfo("Loading burst compiled dll...");
+            if (!System.IO.File.Exists(BurstDllPath))
+            {
+                Logger.LogError($"Burst compiled dll not found at {BurstDllPath}");
+                throw new Exception($"Burst compiled dll not found at {BurstDllPath}");
+            }
+
+            if (!BurstRuntime.LoadAdditionalLibrary(BurstDllPath))
+            {
+                Logger.LogError($"Failed to load burst compiled dll from {BurstDllPath}");
+                throw new Exception($"Failed to load burst compiled dll from {BurstDllPath}");
             }
 
             Logger.LogInfo("Hand tracking setup complete");

@@ -14,10 +14,18 @@ namespace COM3D25_OpenXRHandsPOC2
         InputAction action;
         float threshold;
         float lastPressedTime = 0;
-        bool waitShortpress = false;
-        bool triggerShortPressDown = false;
-        bool triggerShortPressUp = false;
-        float lastUpdateTime = 0;
+        int lastUpdateFrame = 0;
+
+        enum State
+        {
+            Initial,
+            Waiting,
+            PressDown,
+            Pressed,
+            PressUp,
+        }
+
+        State state = State.Initial;
 
         public ShortPressInputActionFilter(InputAction action, float threshold=0.2f)
         {
@@ -27,52 +35,61 @@ namespace COM3D25_OpenXRHandsPOC2
 
         void CheckFrame()
         {
-            if (lastUpdateTime == Time.time) return;
-            lastUpdateTime = Time.time;
+            if (lastUpdateFrame == Time.frameCount) return;
+            lastUpdateFrame = Time.frameCount;
 
             if (action.WasPressedThisFrame())
             {
                 lastPressedTime = Time.time;
-                waitShortpress = true;
-                triggerShortPressDown = false;
-                triggerShortPressUp = false;
+                state = State.Waiting;
                 return;
             }
 
             // pressDown > pressed > pressUp
 
-            if (action.WasReleasedThisFrame() && waitShortpress)
+            if (state == State.Waiting)
             {
-                waitShortpress = false;
-
-                if (Time.time - lastPressedTime < threshold)
+                if (action.WasReleasedThisFrame())
                 {
-                    triggerShortPressDown = true;
+                    if (Time.time - lastPressedTime < threshold)
+                    {
+                        state = State.PressDown;
+                        return;
+                    } else
+                    {
+                        state = State.Initial;
+                        return;
+                    }
+                } 
+
+                if (action.ReadValue<float>() > 0.5f)
+                {
+                    // continue wating
+                    return;
                 }
 
+                state = State.Initial;
                 return;
             }
 
-            if (triggerShortPressDown)
+            if (state == State.PressDown)
             {
-                triggerShortPressDown = false;
-                triggerShortPressUp = true;
+                state = State.PressUp;
                 return;
             }
 
-            if (triggerShortPressUp)
+            if (state == State.PressUp)
             {
-                triggerShortPressUp = false;
+                state = State.Initial;
                 return;
             }
         }
-       
 
         public bool IsPressed {
             get
             {
                 CheckFrame();
-                return triggerShortPressDown;
+                return state == State.Pressed || state == State.PressDown;
             }
         }
 
@@ -80,7 +97,7 @@ namespace COM3D25_OpenXRHandsPOC2
             get
             {
                 CheckFrame();
-                return triggerShortPressDown;
+                return state == State.PressDown;
             }
         }
 
@@ -88,7 +105,7 @@ namespace COM3D25_OpenXRHandsPOC2
             get
             {
                 CheckFrame();
-                return triggerShortPressUp;
+                return state == State.PressUp;
             }
         }
     }
